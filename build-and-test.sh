@@ -18,12 +18,9 @@ set -e
 
 DOCKERFILE=`mktemp -p . Dockerfile.XXX`
 
+BASE_DISTRO=ubuntu-16.04
+REPO=mypokycrops
+
 sed -e "s#FROM crops/yocto:ubuntu-14.04#FROM crops/yocto:${BASE_DISTRO}#" Dockerfile > $DOCKERFILE
-docker build --pull -f $DOCKERFILE -t ${REPO}:${BASE_DISTRO} .
-
-if command -v annotate-output; then
-    ANNOTATE_OUTPUT=annotate-output
-fi
-$ANNOTATE_OUTPUT bash -c "cd tests; ./runtests.sh ${REPO}:${BASE_DISTRO}"
-
+docker build --add-host dockerhost:172.17.0.1 --pull -f $DOCKERFILE -t ${REPO}:${BASE_DISTRO} .
 rm -f $DOCKERFILE
