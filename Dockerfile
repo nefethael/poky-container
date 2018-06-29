@@ -13,6 +13,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+#FROM crops/yocto:debian-9-base
 FROM crops/yocto:ubuntu-16.04-base
 
 USER root
@@ -42,18 +43,25 @@ RUN userdel -r yoctouser && \
     echo "#include /etc/sudoers.usersetup" >> /etc/sudoers
 
 ADD http://storage.googleapis.com/git-repo-downloads/repo /usr/local/bin
-RUN chmod a+x /usr/local/bin/repo
-RUN rm /bin/sh && ln -s bash /bin/sh
+RUN chmod a+rwx /usr/local/bin/repo && \
+        rm /bin/sh && \
+        ln -s bash /bin/sh
 
-RUN echo 'Acquire::http::proxy "http://dockerhost:3128/";' > /etc/apt/apt.conf
+ENV http_proxy dockerhost:3128
+ENV https_proxy dockerhost:3128
+ENV ftp_proxy dockerhost:3128
+RUN echo 'Acquire::http::proxy "http://dockerhost:3128/";' > /etc/apt/apt.conf && \
+    echo 'exec socat STDIO PROXY:dockerhost:$1:$2,proxyport=3128' > /usr/local/bin/gitproxy && \
+    chmod a+rwx /usr/local/bin/gitproxy && \
+    git config --system core.gitproxy /usr/local/bin/gitproxy 
+
 RUN apt-get update && \
-apt-get install -y \
-     gawk wget git-core diffstat unzip texinfo gcc-multilib \
-     build-essential chrpath socat cpio python python3 python3-pip python3-pexpect \
-     xz-utils debianutils iputils-ping libsdl1.2-dev xterm libx11-dev
+    apt-get install -y \
+        socat \
+        libsdl1.2-dev \
+        libx11-dev
 
 USER usersetup
 ENV LANG=en_US.UTF-8
-
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--", "/usr/bin/poky-entry.py"]
